@@ -1,0 +1,104 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  sessions   Session[]
+  assessments Assessment[]
+  quizAnswers QuizAnswer[]
+  progress   Progress?
+  
+  @@map("users")
+}
+
+model Session {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  topic     String     // "English Words", "Math Basics", etc.
+  level     String?    // "Beginner", "Intermediate", "Advanced" (set by Assessor)
+  
+  messages  SessionMessage[]
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  @@map("sessions")
+}
+
+model SessionMessage {
+  id        String     @id @default(cuid())
+  sessionId String
+  session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  role      String     // "user" | "assistant" | "system"
+  agent     String     // "triage" | "assessor" | "tutor" | "quiz" | "progress"
+  content   String
+  
+  createdAt DateTime   @default(now())
+  
+  @@map("session_messages")
+}
+
+model Assessment {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  topic     String
+  level     String     // "Beginner", "Intermediate", "Advanced"
+  score     Int        // 0-100
+  
+  details   Json?      // Detailed assessment results
+  
+  createdAt DateTime   @default(now())
+  
+  @@map("assessments")
+}
+
+model QuizAnswer {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  topic     String
+  question  String
+  userAnswer String
+  correctAnswer String
+  isCorrect Boolean
+  difficulty String    // "Easy", "Medium", "Hard" (adaptif)
+  
+  createdAt DateTime   @default(now())
+  
+  @@map("quiz_answers")
+}
+
+model Progress {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  totalLessons Int     @default(0)
+  totalMinutes Int     @default(0)
+  
+  weeklyReport Json?   // { "week": "2026-04-20", "topics": [...], "improvement": [...] }
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  @@map("progress")
+}
