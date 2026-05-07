@@ -1,4 +1,4 @@
-import { MemorySession, OpenAIConversationsSession, run } from "@openai/agents";
+import { MemorySession, run } from "@openai/agents";
 import { triageAgent } from "../agents/triageAgent";
 import { prisma } from "../database/client";
 import type { AdaptLearnContext } from "../types";
@@ -28,7 +28,7 @@ export async function getOrCreateUserSession(
   let user = await prisma.user.findUnique({ where: { id: userId } });
 
   if (!user) {
-    user = await prisma.user.create({
+    user = await prisma.user.create({ 
       data: {
         id: userId,
         email: `user_${userId}@adaptlearn.local`, // Placeholder
@@ -109,6 +109,16 @@ export async function runAgentWithSession(
           agent: "triage",
           content: result.finalOutput.toString(),
         },
+      });
+    }
+
+    // Assessor level tespiti yaptıysa kaydet
+    const output = result.finalOutput?.toString() || "";
+    const levelMatch = output.match(/LEVEL:\s*(Beginner|Intermediate|Advanced)/i);
+    if (levelMatch) {
+      await prisma.session.update({
+        where: { id: dbSession.id },
+        data: { level: levelMatch[1] },
       });
     }
 
